@@ -1,0 +1,5 @@
+[dD]ist 
+bower_components
+node_modules
+**/*.gulp-tsc*
+gulp-tsc*
