@@ -1,0 +1,25 @@
+{
+  "name": "three",
+  "description": "Test project using Three js",
+  "main": "index.js",
+  "authors": [
+    "Fax"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "three.js"
+  ],
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "three.js": "^0.78.0",
+    "requirejs": "^2.2.0"
+  }
+}
