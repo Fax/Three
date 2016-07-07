@@ -11,12 +11,14 @@ namespace ThreeTest {
      */
     constructor() {
       
-      this.geometry = new THREE.BoxBufferGeometry( 10, 10, 10 );
+        this.geometry = new THREE.BoxBufferGeometry(10, 10, 10);
+        
     }
 
     public SetTexture(url:string): void{
      this.texture = new THREE.TextureLoader().load( url );
-     this.material = new THREE.MeshBasicMaterial( { map: this.texture } );
+     this.material = new THREE.MeshBasicMaterial({ map: this.texture });
+     this.GetMesh();   
     }
 
     public GetMesh(){
@@ -25,6 +27,10 @@ namespace ThreeTest {
       }
       return this.mesh;
     }
+    
+    public SetPosition(x: number, y: number, z: number) {
+        this.mesh.position.set(x, y, z);
+    } 
 
   }
 }

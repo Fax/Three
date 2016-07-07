@@ -4,12 +4,21 @@ namespace ThreeTest {
     export class MainApp {
 
         private three: ThreeJSTest;
+        private w: number;
+        private h: number;
         /**
          *
          */
         constructor() {
-            console.log(Math.PI);
-            this.three = new ThreeJSTest(window.innerWidth, window.innerHeight);
+            this.w = window.screen.width;
+            this.h = window.screen.height;
+            if (this.w > this.h) {
+                this.three = new ThreeJSTest(this.w,this.h);
+            } else {
+                this.three = new ThreeJSTest(this.h,this.w);
+            }
+
+            window.addEventListener("deviceorientation", this.handleOrientation, true);
         }
         /**
          * start
@@ -17,6 +26,12 @@ namespace ThreeTest {
         public start() {
             this.three.start();
         }
+
+        public handleOrientation = (event) => { 
+            console.log(event);
+        }
+
+
     }
 }
 

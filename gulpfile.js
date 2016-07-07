@@ -62,7 +62,7 @@ gulp.task('html:watch', function () {
 
 gulp.task('serve', function() {
   return gulp.src('dist')
-    .pipe(webserver({ host: '127.0.0.1',port:8001, livereload: true, open: true }));
+    .pipe(webserver({ host: '192.168.1.110',port:8001, livereload: true, open: true }));
 });
 
 gulp.task('images',function(){

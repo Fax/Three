@@ -6,8 +6,18 @@ var ThreeTest;
          *
          */
         function MainApp() {
-            console.log(Math.PI);
-            this.three = new ThreeTest.ThreeJSTest(window.innerWidth, window.innerHeight);
+            this.handleOrientation = function (event) {
+                console.log(event);
+            };
+            this.w = window.screen.width;
+            this.h = window.screen.height;
+            if (this.w > this.h) {
+                this.three = new ThreeTest.ThreeJSTest(this.w, this.h);
+            }
+            else {
+                this.three = new ThreeTest.ThreeJSTest(this.h, this.w);
+            }
+            window.addEventListener("deviceorientation", this.handleOrientation, true);
         }
         /**
          * start

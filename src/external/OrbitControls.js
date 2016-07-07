@@ -32,7 +32,9 @@ var THREE;
         /**
          *
          */
-        function OrbitControls(object, domElement) {
+        function OrbitControls(object, domElement, target) {
+            var _this = this;
+            if (target === void 0) { target = undefined; }
             _super.call(this);
             this.enabled = true;
             this.target = new THREE.Vector3();
@@ -80,11 +82,241 @@ var THREE;
             this.STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY: 4, TOUCH_PAN: 5 };
             this.state = this.STATE.NONE;
             // events
+            this.freeze = true;
             this.changeEvent = { type: 'change' };
             this.startEvent = { type: 'start' };
             this.endEvent = { type: 'end' };
+            this.dollyIn = function (dollyScale) {
+                if (dollyScale === void 0) { dollyScale = undefined; }
+                if (dollyScale === undefined) {
+                    dollyScale = _this.getZoomScale();
+                }
+                _this.scale /= dollyScale;
+            };
+            this.dollyOut = function (dollyScale) {
+                if (dollyScale === void 0) { dollyScale = undefined; }
+                if (dollyScale === undefined) {
+                    dollyScale = _this.getZoomScale();
+                }
+                _this.scale *= dollyScale;
+            };
+            this.onMouseDown = function (event) {
+                if (_this.enabled === false)
+                    return;
+                event.preventDefault();
+                if (event.button === 0) {
+                    if (_this.noRotate === true)
+                        return;
+                    _this.state = _this.STATE.ROTATE;
+                    _this.rotateStart.set(event.clientX, event.clientY);
+                }
+                else if (event.button === 1) {
+                    if (_this.noZoom === true)
+                        return;
+                    _this.state = _this.STATE.DOLLY;
+                    _this.dollyStart.set(event.clientX, event.clientY);
+                }
+                else if (event.button === 2) {
+                    if (_this.noPan === true)
+                        return;
+                    _this.state = _this.STATE.PAN;
+                    _this.panStart.set(event.clientX, event.clientY);
+                }
+                _this.domElement.addEventListener('mousemove', _this.onMouseMove, false);
+                _this.domElement.addEventListener('mouseup', _this.onMouseUp, false);
+                _this.dispatchEvent(_this.startEvent);
+            };
+            this.onMouseMove = function (event) {
+                if (_this.enabled === false)
+                    return;
+                event.preventDefault();
+                var element = _this.domElement === document ? _this.domElement.body : _this.domElement;
+                if (_this.state === _this.STATE.ROTATE) {
+                    if (_this.noRotate === true)
+                        return;
+                    _this.rotateEnd.set(event.clientX, event.clientY);
+                    _this.rotateDelta.subVectors(_this.rotateEnd, _this.rotateStart);
+                    // rotating across whole screen goes 360 degrees around
+                    _this.rotateLeft(2 * Math.PI * _this.rotateDelta.x / element.clientWidth * _this.rotateSpeed);
+                    // rotating up and down along whole screen attempts to go 360, but limited to 180
+                    _this.rotateUp(2 * Math.PI * _this.rotateDelta.y / element.clientHeight * _this.rotateSpeed);
+                    _this.rotateStart.copy(_this.rotateEnd);
+                }
+                else if (_this.state === _this.STATE.DOLLY) {
+                    if (_this.noZoom === true)
+                        return;
+                    _this.dollyEnd.set(event.clientX, event.clientY);
+                    _this.dollyDelta.subVectors(_this.dollyEnd, _this.dollyStart);
+                    if (_this.dollyDelta.y > 0) {
+                        _this.dollyIn();
+                    }
+                    else {
+                        _this.dollyOut();
+                    }
+                    _this.dollyStart.copy(_this.dollyEnd);
+                }
+                else if (_this.state === _this.STATE.PAN) {
+                    if (_this.noPan === true)
+                        return;
+                    _this.panEnd.set(event.clientX, event.clientY);
+                    _this.panDelta.subVectors(_this.panEnd, _this.panStart);
+                    _this.panAmount(_this.panDelta.x, _this.panDelta.y);
+                    _this.panStart.copy(_this.panEnd);
+                }
+                _this.update();
+            };
+            this.onMouseUp = function () {
+                if (_this.enabled === false)
+                    return;
+                _this.domElement.removeEventListener('mousemove', _this.onMouseMove, false);
+                _this.domElement.removeEventListener('mouseup', _this.onMouseUp, false);
+                _this.dispatchEvent(_this.endEvent);
+                _this.state = _this.STATE.NONE;
+            };
+            this.onMouseWheel = function (event) {
+                if (_this.enabled === false || _this.noZoom === true)
+                    return;
+                event.preventDefault();
+                event.stopPropagation();
+                var delta = 0;
+                if (event.wheelDelta !== undefined) {
+                    delta = event.wheelDelta;
+                }
+                else if (event.detail !== undefined) {
+                    delta = -event.detail;
+                }
+                if (delta > 0) {
+                    _this.dollyOut();
+                }
+                else {
+                    _this.dollyIn();
+                }
+                _this.update();
+                _this.dispatchEvent(_this.startEvent);
+                _this.dispatchEvent(_this.endEvent);
+            };
+            this.onKeyDown = function (event) {
+                if (_this.enabled === false || _this.noKeys === true || _this.noPan === true)
+                    return;
+                console.log(event);
+                switch (event.keyCode) {
+                    case _this.keys.UP:
+                        _this.rotateUp(-Math.PI / 360);
+                        _this.update();
+                        break;
+                    case _this.keys.BOTTOM:
+                        //this.panAmount(0, - this.keyPanSpeed);
+                        _this.rotateUp(Math.PI / 360);
+                        _this.update();
+                        break;
+                    case _this.keys.LEFT:
+                        //this.panAmount( this.keyPanSpeed, 0 );
+                        _this.rotateLeft(-Math.PI / 360);
+                        _this.update();
+                        break;
+                    case _this.keys.RIGHT:
+                        //this.panAmount( - this.keyPanSpeed, 0 );
+                        _this.rotateLeft(Math.PI / 360);
+                        _this.update();
+                        break;
+                }
+            };
+            this.touchstart = function (event) {
+                if (_this.enabled === false)
+                    return;
+                switch (event.touches.length) {
+                    case 1:
+                        if (_this.noRotate === true)
+                            return;
+                        _this.state = _this.STATE.TOUCH_ROTATE;
+                        _this.rotateStart.set(event.touches[0].pageX, event.touches[0].pageY);
+                        break;
+                    case 2:
+                        if (_this.noZoom === true)
+                            return;
+                        _this.state = _this.STATE.TOUCH_DOLLY;
+                        var dx = event.touches[0].pageX - event.touches[1].pageX;
+                        var dy = event.touches[0].pageY - event.touches[1].pageY;
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+                        _this.dollyStart.set(0, distance);
+                        break;
+                    case 3:
+                        if (_this.noPan === true)
+                            return;
+                        _this.state = _this.STATE.TOUCH_PAN;
+                        _this.panStart.set(event.touches[0].pageX, event.touches[0].pageY);
+                        break;
+                    default:
+                        _this.state = _this.STATE.NONE;
+                }
+                _this.dispatchEvent(_this.startEvent);
+            };
+            this.touchmove = function (event) {
+                if (_this.enabled === false)
+                    return;
+                event.preventDefault();
+                event.stopPropagation();
+                var element = _this.domElement === document ? _this.domElement.body : _this.domElement;
+                switch (event.touches.length) {
+                    case 1:
+                        if (_this.noRotate === true)
+                            return;
+                        if (_this.state !== _this.STATE.TOUCH_ROTATE)
+                            return;
+                        _this.rotateEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+                        _this.rotateDelta.subVectors(_this.rotateEnd, _this.rotateStart);
+                        // rotating across whole screen goes 360 degrees around
+                        _this.rotateLeft(2 * Math.PI * _this.rotateDelta.x / element.clientWidth * _this.rotateSpeed);
+                        // rotating up and down along whole screen attempts to go 360, but limited to 180
+                        _this.rotateUp(2 * -Math.PI * _this.rotateDelta.y / element.clientHeight * _this.rotateSpeed);
+                        _this.rotateStart.copy(_this.rotateEnd);
+                        _this.update();
+                        break;
+                    case 2:
+                        if (_this.noZoom === true)
+                            return;
+                        if (_this.state !== _this.STATE.TOUCH_DOLLY)
+                            return;
+                        var dx = event.touches[0].pageX - event.touches[1].pageX;
+                        var dy = event.touches[0].pageY - event.touches[1].pageY;
+                        var distance = Math.sqrt(dx * dx + dy * dy);
+                        _this.dollyEnd.set(0, distance);
+                        _this.dollyDelta.subVectors(_this.dollyEnd, _this.dollyStart);
+                        if (_this.dollyDelta.y > 0) {
+                            _this.dollyOut();
+                        }
+                        else {
+                            _this.dollyIn();
+                        }
+                        _this.dollyStart.copy(_this.dollyEnd);
+                        _this.update();
+                        break;
+                    case 3:
+                        if (_this.noPan === true)
+                            return;
+                        if (_this.state !== _this.STATE.TOUCH_PAN)
+                            return;
+                        _this.panEnd.set(event.touches[0].pageX, event.touches[0].pageY);
+                        _this.panDelta.subVectors(_this.panEnd, _this.panStart);
+                        _this.panAmount(_this.panDelta.x, _this.panDelta.y);
+                        _this.panStart.copy(_this.panEnd);
+                        _this.update();
+                        break;
+                    default:
+                        _this.state = _this.STATE.NONE;
+                }
+            };
+            this.touchend = function () {
+                if (_this.enabled === false)
+                    return;
+                _this.dispatchEvent(_this.endEvent);
+                _this.state = _this.STATE.NONE;
+                _this.update();
+            };
             this.object = object;
             this.domElement = (domElement !== undefined) ? domElement : document;
+            if (target != undefined)
+                this.target = target;
             this.target0 = this.target.clone();
             this.position0 = this.object.position.clone();
             this.quat = new THREE.Quaternion().setFromUnitVectors(this.object.up, new THREE.Vector3(0, 1, 0));
@@ -99,9 +331,18 @@ var THREE;
             this.domElement.addEventListener('touchmove', this.touchmove, false);
             window.addEventListener('keydown', this.onKeyDown, false);
             // force an update at start
-            this.update();
+            this.update(null);
         }
+        OrbitControls.prototype.connect = function () {
+            this.freeze = false;
+        };
+        ;
+        OrbitControls.prototype.disconnect = function () {
+            this.freeze = true;
+        };
+        ;
         OrbitControls.prototype.rotateLeft = function (angle) {
+            if (angle === void 0) { angle = undefined; }
             if (angle === undefined) {
                 angle = this.getAutoRotationAngle();
             }
@@ -109,6 +350,7 @@ var THREE;
         };
         ;
         OrbitControls.prototype.rotateUp = function (angle) {
+            if (angle === void 0) { angle = undefined; }
             if (angle === undefined) {
                 angle = this.getAutoRotationAngle();
             }
@@ -159,23 +401,8 @@ var THREE;
             }
         };
         ;
-        OrbitControls.prototype.dollyIn = function (dollyScale) {
-            if (dollyScale === void 0) { dollyScale = undefined; }
-            if (dollyScale === undefined) {
-                dollyScale = this.getZoomScale();
-            }
-            this.scale /= dollyScale;
-        };
-        ;
-        OrbitControls.prototype.dollyOut = function (dollyScale) {
-            if (dollyScale === void 0) { dollyScale = undefined; }
-            if (dollyScale === undefined) {
-                dollyScale = this.getZoomScale();
-            }
-            this.scale *= dollyScale;
-        };
-        ;
-        OrbitControls.prototype.update = function () {
+        OrbitControls.prototype.update = function (delta) {
+            if (delta === void 0) { delta = 0; }
             var position = this.object.position;
             var offset = this.offset;
             offset.copy(position).sub(this.target);
@@ -220,7 +447,7 @@ var THREE;
             this.state = this.STATE.NONE;
             this.target.copy(this.target0);
             this.object.position.copy(this.position0);
-            this.update();
+            this.update(null);
         };
         ;
         OrbitControls.prototype.getAutoRotationAngle = function () {
@@ -228,214 +455,6 @@ var THREE;
         };
         OrbitControls.prototype.getZoomScale = function () {
             return Math.pow(0.95, this.zoomSpeed);
-        };
-        OrbitControls.prototype.onMouseDown = function (event) {
-            if (this.enabled === false)
-                return;
-            event.preventDefault();
-            if (event.button === 0) {
-                if (this.noRotate === true)
-                    return;
-                this.state = this.STATE.ROTATE;
-                this.rotateStart.set(event.clientX, event.clientY);
-            }
-            else if (event.button === 1) {
-                if (this.noZoom === true)
-                    return;
-                this.state = this.STATE.DOLLY;
-                this.dollyStart.set(event.clientX, event.clientY);
-            }
-            else if (event.button === 2) {
-                if (this.noPan === true)
-                    return;
-                this.state = this.STATE.PAN;
-                this.panStart.set(event.clientX, event.clientY);
-            }
-            this.domElement.addEventListener('mousemove', this.onMouseMove, false);
-            this.domElement.addEventListener('mouseup', this.onMouseUp, false);
-            this.dispatchEvent(this.startEvent);
-        };
-        OrbitControls.prototype.onMouseMove = function (event) {
-            if (this.enabled === false)
-                return;
-            event.preventDefault();
-            var element = this.domElement === document ? this.domElement.body : this.domElement;
-            if (this.state === this.STATE.ROTATE) {
-                if (this.noRotate === true)
-                    return;
-                this.rotateEnd.set(event.clientX, event.clientY);
-                this.rotateDelta.subVectors(this.rotateEnd, this.rotateStart);
-                // rotating across whole screen goes 360 degrees around
-                this.rotateLeft(2 * Math.PI * this.rotateDelta.x / element.clientWidth * this.rotateSpeed);
-                // rotating up and down along whole screen attempts to go 360, but limited to 180
-                this.rotateUp(2 * Math.PI * this.rotateDelta.y / element.clientHeight * this.rotateSpeed);
-                this.rotateStart.copy(this.rotateEnd);
-            }
-            else if (this.state === this.STATE.DOLLY) {
-                if (this.noZoom === true)
-                    return;
-                this.dollyEnd.set(event.clientX, event.clientY);
-                this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
-                if (this.dollyDelta.y > 0) {
-                    this.dollyIn();
-                }
-                else {
-                    this.dollyOut();
-                }
-                this.dollyStart.copy(this.dollyEnd);
-            }
-            else if (this.state === this.STATE.PAN) {
-                if (this.noPan === true)
-                    return;
-                this.panEnd.set(event.clientX, event.clientY);
-                this.panDelta.subVectors(this.panEnd, this.panStart);
-                this.panAmount(this.panDelta.x, this.panDelta.y);
-                this.panStart.copy(this.panEnd);
-            }
-            this.update();
-        };
-        OrbitControls.prototype.onMouseUp = function () {
-            if (this.enabled === false)
-                return;
-            this.domElement.removeEventListener('mousemove', this.onMouseMove, false);
-            this.domElement.removeEventListener('mouseup', this.onMouseUp, false);
-            this.dispatchEvent(this.endEvent);
-            this.state = this.STATE.NONE;
-        };
-        OrbitControls.prototype.onMouseWheel = function (event) {
-            if (this.enabled === false || this.noZoom === true)
-                return;
-            event.preventDefault();
-            event.stopPropagation();
-            var delta = 0;
-            if (event.wheelDelta !== undefined) {
-                delta = event.wheelDelta;
-            }
-            else if (event.detail !== undefined) {
-                delta = -event.detail;
-            }
-            if (delta > 0) {
-                this.dollyOut();
-            }
-            else {
-                this.dollyIn();
-            }
-            this.update();
-            this.dispatchEvent(this.startEvent);
-            this.dispatchEvent(this.endEvent);
-        };
-        OrbitControls.prototype.onKeyDown = function (event) {
-            if (this.enabled === false || this.noKeys === true || this.noPan === true)
-                return;
-            switch (event.keyCode) {
-                case this.keys.UP:
-                    this.panAmount(0, this.keyPanSpeed);
-                    this.update();
-                    break;
-                case this.keys.BOTTOM:
-                    this.panAmount(0, -this.keyPanSpeed);
-                    this.update();
-                    break;
-                case this.keys.LEFT:
-                    this.panAmount(this.keyPanSpeed, 0);
-                    this.update();
-                    break;
-                case this.keys.RIGHT:
-                    this.panAmount(-this.keyPanSpeed, 0);
-                    this.update();
-                    break;
-            }
-        };
-        OrbitControls.prototype.touchstart = function (event) {
-            if (this.enabled === false)
-                return;
-            switch (event.touches.length) {
-                case 1:
-                    if (this.noRotate === true)
-                        return;
-                    this.state = this.STATE.TOUCH_ROTATE;
-                    this.rotateStart.set(event.touches[0].pageX, event.touches[0].pageY);
-                    break;
-                case 2:
-                    if (this.noZoom === true)
-                        return;
-                    this.state = this.STATE.TOUCH_DOLLY;
-                    var dx = event.touches[0].pageX - event.touches[1].pageX;
-                    var dy = event.touches[0].pageY - event.touches[1].pageY;
-                    var distance = Math.sqrt(dx * dx + dy * dy);
-                    this.dollyStart.set(0, distance);
-                    break;
-                case 3:
-                    if (this.noPan === true)
-                        return;
-                    this.state = this.STATE.TOUCH_PAN;
-                    this.panStart.set(event.touches[0].pageX, event.touches[0].pageY);
-                    break;
-                default:
-                    this.state = this.STATE.NONE;
-            }
-            this.dispatchEvent(this.startEvent);
-        };
-        OrbitControls.prototype.touchmove = function (event) {
-            if (this.enabled === false)
-                return;
-            event.preventDefault();
-            event.stopPropagation();
-            var element = this.domElement === document ? this.domElement.body : this.domElement;
-            switch (event.touches.length) {
-                case 1:
-                    if (this.noRotate === true)
-                        return;
-                    if (this.state !== this.STATE.TOUCH_ROTATE)
-                        return;
-                    this.rotateEnd.set(event.touches[0].pageX, event.touches[0].pageY);
-                    this.rotateDelta.subVectors(this.rotateEnd, this.rotateStart);
-                    // rotating across whole screen goes 360 degrees around
-                    this.rotateLeft(2 * Math.PI * this.rotateDelta.x / element.clientWidth * this.rotateSpeed);
-                    // rotating up and down along whole screen attempts to go 360, but limited to 180
-                    this.rotateUp(2 * Math.PI * this.rotateDelta.y / element.clientHeight * this.rotateSpeed);
-                    this.rotateStart.copy(this.rotateEnd);
-                    this.update();
-                    break;
-                case 2:
-                    if (this.noZoom === true)
-                        return;
-                    if (this.state !== this.STATE.TOUCH_DOLLY)
-                        return;
-                    var dx = event.touches[0].pageX - event.touches[1].pageX;
-                    var dy = event.touches[0].pageY - event.touches[1].pageY;
-                    var distance = Math.sqrt(dx * dx + dy * dy);
-                    this.dollyEnd.set(0, distance);
-                    this.dollyDelta.subVectors(this.dollyEnd, this.dollyStart);
-                    if (this.dollyDelta.y > 0) {
-                        this.dollyOut();
-                    }
-                    else {
-                        this.dollyIn();
-                    }
-                    this.dollyStart.copy(this.dollyEnd);
-                    this.update();
-                    break;
-                case 3:
-                    if (this.noPan === true)
-                        return;
-                    if (this.state !== this.STATE.TOUCH_PAN)
-                        return;
-                    this.panEnd.set(event.touches[0].pageX, event.touches[0].pageY);
-                    this.panDelta.subVectors(this.panEnd, this.panStart);
-                    this.panAmount(this.panDelta.x, this.panDelta.y);
-                    this.panStart.copy(this.panEnd);
-                    this.update();
-                    break;
-                default:
-                    this.state = this.STATE.NONE;
-            }
-        };
-        OrbitControls.prototype.touchend = function () {
-            if (this.enabled === false)
-                return;
-            this.dispatchEvent(this.endEvent);
-            this.state = this.STATE.NONE;
         };
         return OrbitControls;
     }(THREE.EventDispatcher));

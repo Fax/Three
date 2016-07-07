@@ -11,12 +11,16 @@ var ThreeTest;
         Bit.prototype.SetTexture = function (url) {
             this.texture = new THREE.TextureLoader().load(url);
             this.material = new THREE.MeshBasicMaterial({ map: this.texture });
+            this.GetMesh();
         };
         Bit.prototype.GetMesh = function () {
             if (this.mesh === undefined) {
                 this.mesh = new THREE.Mesh(this.geometry, this.material);
             }
             return this.mesh;
+        };
+        Bit.prototype.SetPosition = function (x, y, z) {
+            this.mesh.position.set(x, y, z);
         };
         return Bit;
     }());

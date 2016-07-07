@@ -27,14 +27,14 @@ var Math = window.Math;
 // Simple substitute "OrbitControls" and the control should work as-is.
 
 export class OrbitControls extends THREE.EventDispatcher {
-    private object: any;
+    protected object: any;
     private domElement: any;
-    private enabled = true;
-    private target = new THREE.Vector3();
+    public enabled = true;
+    public target = new THREE.Vector3();
     private center = this.target;
     private pan = new THREE.Vector3();
-  private noZoom = false;
-  private zoomSpeed = 1.0;
+  public noZoom = false;
+  public zoomSpeed = 1.0;
 
   // Limits to how far you can dolly in and out
   private minDistance = 0;
@@ -45,7 +45,7 @@ export class OrbitControls extends THREE.EventDispatcher {
   private rotateSpeed = 1.0;
 
   // Set to true to disable this control
-  private noPan = false;
+  public noPan = false;
   private keyPanSpeed = 7.0; // pixels moved per arrow key push
 
   // Set to true to automatically rotate around the target
@@ -58,7 +58,7 @@ export class OrbitControls extends THREE.EventDispatcher {
   private maxPolarAngle = 3.14; // radians
 
   // Set to true to disable use of the keys
-  private noKeys = false;
+  public noKeys = false;
 
   // The four arrow keys
   private keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
@@ -96,7 +96,7 @@ private scope = this;
   private quatInverse;
 
   // events
-
+  protected freeze = true;
   private changeEvent = { type: 'change' };
   private startEvent = { type: 'start'};
   private endEvent = { type: 'end'};
@@ -108,40 +108,48 @@ private scope = this;
     /**
      *
      */
-    constructor(object, domElement) {
+    constructor(object, domElement, target = undefined) {
       super();
       
       this.object = object;
-      this.domElement = ( domElement !== undefined ) ? domElement : document;
+      this.domElement = (domElement !== undefined) ? domElement : document;
+      if(target != undefined)
+        this.target = target;
 
-  this.target0 = this.target.clone();
-  this.position0 = this.object.position.clone();
-
-
-  this.quat = new THREE.Quaternion().setFromUnitVectors( this.object.up, new THREE.Vector3( 0, 1, 0 ) );
-  this.quatInverse = this.quat.clone().inverse();
-  // so camera.up is the orbit axis
+      this.target0 = this.target.clone();
+      this.position0 = this.object.position.clone();
 
 
+      this.quat = new THREE.Quaternion().setFromUnitVectors( this.object.up, new THREE.Vector3( 0, 1, 0 ) );
+      this.quatInverse = this.quat.clone().inverse();
+      // so camera.up is the orbit axis
 
-  this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
-  this.domElement.addEventListener( 'mousedown', this.onMouseDown, false );
-  this.domElement.addEventListener( 'mousewheel', this.onMouseWheel, false );
-  this.domElement.addEventListener( 'DOMMouseScroll', this.onMouseWheel, false ); // firefox
 
-  this.domElement.addEventListener( 'touchstart', this.touchstart, false );
-  this.domElement.addEventListener( 'touchend', this.touchend, false );
-  this.domElement.addEventListener( 'touchmove', this.touchmove, false );
 
-  window.addEventListener( 'keydown', this.onKeyDown, false );
+      this.domElement.addEventListener( 'contextmenu', function ( event ) { event.preventDefault(); }, false );
+      this.domElement.addEventListener( 'mousedown', this.onMouseDown, false );
+      this.domElement.addEventListener( 'mousewheel', this.onMouseWheel, false );
+      this.domElement.addEventListener( 'DOMMouseScroll', this.onMouseWheel, false ); // firefox
+
+      this.domElement.addEventListener( 'touchstart', this.touchstart, false );
+      this.domElement.addEventListener( 'touchend', this.touchend, false );
+      this.domElement.addEventListener( 'touchmove', this.touchmove, false );
+
+      window.addEventListener( 'keydown', this.onKeyDown, false );
 
   // force an update at start
-  this.update();
+      this.update(null);  
 
       
     }
+  public connect() {
+        this.freeze = false;
+  };
 
-  public rotateLeft( angle ) {
+  public disconnect() {
+        this.freeze = true;
+  };
+  public rotateLeft( angle  = undefined ) {
 
     if ( angle === undefined ) {
 
@@ -150,10 +158,11 @@ private scope = this;
     }
 
     this.thetaDelta -= angle;
+    
 
   };
 
-  public rotateUp ( angle ) {
+  public rotateUp ( angle = undefined) {
 
     if ( angle === undefined ) {
 
@@ -162,7 +171,7 @@ private scope = this;
     }
 
     this.phiDelta -= angle;
-
+    
   };
 
   // pass in distance in world space to move left
@@ -225,7 +234,7 @@ private scope = this;
 
   };
 
-  public dollyIn ( dollyScale = undefined ) {
+  public dollyIn = ( dollyScale = undefined ) => {
 
     if ( dollyScale === undefined ) {
 
@@ -237,7 +246,7 @@ private scope = this;
 
   };
 
-  public dollyOut ( dollyScale = undefined ) {
+  public dollyOut  = ( dollyScale = undefined ) =>{
 
     if ( dollyScale === undefined ) {
 
@@ -249,7 +258,7 @@ private scope = this;
 
   };
 
-  public update() {
+  public update(delta: any = 0) {
 
     var position = this.object.position;
     let offset = this.offset;
@@ -325,7 +334,7 @@ private scope = this;
     this.target.copy( this.target0 );
     this.object.position.copy( this.position0 );
 
-    this.update();
+    this.update(null);
 
   };
 
@@ -341,7 +350,7 @@ private scope = this;
 
   }
 
-  private onMouseDown( event ) {
+  private onMouseDown = ( event ) => {
 
     if ( this.enabled === false ) return;
     event.preventDefault();
@@ -375,7 +384,7 @@ private scope = this;
 
   }
 
-  private onMouseMove( event ) {
+  private onMouseMove=( event ) =>{
 
     if ( this.enabled === false ) return;
 
@@ -434,7 +443,7 @@ private scope = this;
 
   }
 
-  private onMouseUp( /* event */ ) {
+  private onMouseUp = ( /* event */ ) =>{
 
     if ( this.enabled === false ) return;
 
@@ -445,7 +454,7 @@ private scope = this;
 
   }
 
-  private onMouseWheel( event ) {
+  private onMouseWheel = ( event )=> {
 
     if ( this.enabled === false || this.noZoom === true ) return;
 
@@ -480,29 +489,34 @@ private scope = this;
 
   }
 
-  private onKeyDown( event ) {
+  private onKeyDown = ( event ) => {
 
     if ( this.enabled === false || this.noKeys === true || this.noPan === true ) return;
-
+    console.log(event);
     switch ( event.keyCode ) {
 
       case this.keys.UP:
-        this.panAmount( 0, this.keyPanSpeed );
+        this.rotateUp(-Math.PI / 360);
+        
         this.update();
         break;
 
       case this.keys.BOTTOM:
-        this.panAmount( 0, - this.keyPanSpeed );
+        //this.panAmount(0, - this.keyPanSpeed);
+        this.rotateUp(Math.PI / 360);
+        
         this.update();
         break;
 
       case this.keys.LEFT:
-        this.panAmount( this.keyPanSpeed, 0 );
+        //this.panAmount( this.keyPanSpeed, 0 );
+        this.rotateLeft(-Math.PI /360 );
         this.update();
         break;
 
       case this.keys.RIGHT:
-        this.panAmount( - this.keyPanSpeed, 0 );
+        //this.panAmount( - this.keyPanSpeed, 0 );
+        this.rotateLeft(Math.PI /360 );
         this.update();
         break;
 
@@ -510,7 +524,7 @@ private scope = this;
 
   }
 
-  private touchstart( event ) {
+  private touchstart =( event ) => {
 
     if ( this.enabled === false ) return;
 
@@ -556,7 +570,7 @@ private scope = this;
 
   }
 
-  private touchmove( event ) {
+  private touchmove = ( event ) => {
 
     if ( this.enabled === false ) return;
 
@@ -578,7 +592,7 @@ private scope = this;
         // rotating across whole screen goes 360 degrees around
         this.rotateLeft( 2 * Math.PI * this.rotateDelta.x / element.clientWidth * this.rotateSpeed );
         // rotating up and down along whole screen attempts to go 360, but limited to 180
-        this.rotateUp( 2 * Math.PI * this.rotateDelta.y / element.clientHeight * this.rotateSpeed );
+        this.rotateUp( 2 * -Math.PI * this.rotateDelta.y / element.clientHeight * this.rotateSpeed );
 
         this.rotateStart.copy( this.rotateEnd );
 
@@ -635,12 +649,13 @@ private scope = this;
 
   }
 
-  private touchend( /* event */ ) {
+  private touchend = ( /* event */ ) =>{
 
     if ( this.enabled === false ) return;
 
     this.dispatchEvent( this.endEvent );
-    this.state =this.STATE.NONE;
+    this.state = this.STATE.NONE;
+    this.update();
 
   }
 

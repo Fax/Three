@@ -10,6 +10,9 @@ namespace ThreeTest {
         effect: any;
         mesh: THREE.Mesh;
         clock: THREE.Clock;
+        terrain: ThreeTest.Terrain;
+
+        controls: THREE.OrbitControls;
 
         
         Loop = () => {
@@ -25,22 +28,21 @@ namespace ThreeTest {
             this.renderer = new THREE.WebGLRenderer({ alpha: true });
             this.renderer.setSize(w,h);
             this.renderer.setClearColor(0xAAAAFF, 1);
-
+            this.terrain = new ThreeTest.Terrain();
             this.clock = new THREE.Clock();
-            
             this.camera = new ThreeTest.BaseCamera(w, h, 400);
-            
 
             this.scene = new THREE.Scene();
             this.scene.add(this.camera.camera);
-            
+           
             let light = new THREE.HemisphereLight(0x777777, 0x000000, 0.6);
             this.scene.add(light);
+            this.terrain.AddToScene(this.scene);
 
             var geo = new ThreeTest.Bit();
             geo.SetTexture('/img/box.jpg');
             this.mesh = geo.GetMesh();
-            this.mesh.position.set(0, 20, -20);
+            this.mesh.position.set(0, 10, -20);
             this.scene.add(this.mesh);
 
 
@@ -64,19 +66,43 @@ namespace ThreeTest {
             var mesh = new THREE.Mesh(geometry, material);
             mesh.rotation.x = -Math.PI / 2;
 
-            this.scene.add(mesh);
+            //this.scene.add(mesh);
 
 
             this.effect = new THREE.StereoEffect(this.renderer);
             this.effect.setSize(w, h);
 
+             this.controls = new THREE.OrbitControls(this.camera.camera,
+                this.renderer.domElement);
+            
+             this.controls.rotateUp(-Math.PI/3 );
+             this.controls.update();
+
+           
+            this.controls.noZoom = true;
+            this.controls.noPan = false;
+            this.controls.noKeys = false;
+
+
+
             document.body.appendChild(this.renderer.domElement);
+            
         }
 
         public start() {
+            this.fullscreen();
             this.renderer.clear();
             this.Loop();
         }
+
+        public fullscreen() {
+            let container = document.body;
+            if (container.requestFullscreen) {
+                container.requestFullscreen();
+            }
+        }
+        
+       
 
     }
 
